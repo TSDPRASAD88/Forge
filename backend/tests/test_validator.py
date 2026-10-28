@@ -41,3 +41,8 @@ def test_bad_final_step_is_caught(q):
     steps = [*q.steps[:-1], q.steps[-1].model_copy(update={"result": "bogus"})]
     bad = q.model_copy(update={"steps": steps})
     assert not validate_question(bad).ok
+
+
+def test_missing_note_is_caught(q):
+    bad = q.model_copy(update={"distractor_notes": {}})
+    assert not validate_question(bad).ok

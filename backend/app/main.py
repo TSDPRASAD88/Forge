@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health, history, profiles, sessions
+from app.api import health, history, profiles, sessions, stats
 from app.core.config import get_settings
 from app.db import mongo
 
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
     app.include_router(profiles.router, prefix="/api")
     app.include_router(sessions.router, prefix="/api")
     app.include_router(history.router, prefix="/api")
+    app.include_router(stats.router, prefix="/api")
     return app
 
 

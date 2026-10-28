@@ -1,4 +1,4 @@
-import type { AnswerResult, Difficulty, Exam, Profile, Session } from "./types";
+import type { AnswerResult, Difficulty, Exam, Profile, Session, Stats } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
@@ -13,6 +13,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const getProfiles = () => request<Profile[]>("/profiles");
+export const getStats = () => request<Stats>("/stats");
 
 export const createSession = (body: {
   exam: Exam;
