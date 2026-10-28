@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+motor
+pytest
+httpxmongomock-motor
