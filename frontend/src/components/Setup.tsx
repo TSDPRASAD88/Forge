@@ -21,6 +21,7 @@ const TOPICS: { value: Topic | null; label: string }[] = [
   { value: "profit_loss", label: "Profit & loss" },
   { value: "time_work", label: "Time & work" },
   { value: "averages_mixtures", label: "Averages & mixtures" },
+  { value: "interest", label: "Simple & compound interest" },
 ];
 
 export default function Setup({ onStart }: Props) {
