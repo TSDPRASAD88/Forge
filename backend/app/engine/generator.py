@@ -12,7 +12,7 @@ MAX_TRIES = 200
 DIRECTIONS = ["increase", "decrease"]
 # bases where 100/base has a denominator dividing 100 (so answers display exactly)
 CLEAN_BASES = [8, 16, 20, 25, 40, 50, 80, 125, 200, 250, 400, 500, 1000]
-GENERIC_NOTE = "This value is close to the answer but not correct. Recheck each calculation step."
+
 
 
 class GenerationError(RuntimeError):
@@ -285,10 +285,18 @@ def _build_options(
     for value, note in shuffled:                 # 1) realistic mistakes first
         consider(value, note)
     for q in (10, -10, 20, -20, 5, -5):          # 2) nearby values
-        consider(answer * Fraction(100 + q, 100), GENERIC_NOTE)
+        consider(
+            answer * Fraction(100 + q, 100),
+            f"This differs from the correct answer by about {abs(q)}%. It does not match a standard "
+            f"mistake for this question, so recheck your arithmetic step by step.",
+        )
     for k in range(1, 100):                      # 3) guaranteed fallback
-        consider(answer + k, GENERIC_NOTE)
-        consider(answer - k, GENERIC_NOTE)
+        note = (
+            f"This is {k} away from the correct answer. It does not match a standard "
+            f"mistake for this question, so recheck your arithmetic step by step."
+        )
+        consider(answer + k, note)
+        consider(answer - k, note)
 
     choices = [answer, *(c for c, _ in distractors)]
     rng.shuffle(choices)
@@ -310,6 +318,14 @@ def _generators_for(topic: Topic) -> dict[str, Callable[[random.Random, Difficul
         from app.engine.profit_loss import PL_GENERATORS
 
         return PL_GENERATORS
+    if topic == Topic.TIME_WORK:
+        from app.engine.time_work import TW_GENERATORS
+
+        return TW_GENERATORS
+    if topic == Topic.AVERAGES_MIXTURES:
+        from app.engine.averages import AM_GENERATORS
+
+        return AM_GENERATORS
     raise ValueError(f"no generators for topic {topic}")
 
 

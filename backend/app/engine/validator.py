@@ -122,3 +122,24 @@ TEXT_PARAM_ORDER.update(
         "pl_two_articles": ["p", "p"],
     }
 )
+
+TEXT_PARAM_ORDER.update(
+    {
+        "tw_together": ["x", "y"],
+        "tw_alone": ["t", "x"],
+        "tw_leaving": ["x", "y", "d"],
+        "tw_wages": ["x", "y", "w"],
+        "tw_pipes": ["f", "e"],
+    }
+)
+
+TEXT_PARAM_ORDER.update(
+    {
+        "avg_new_member": ["n", "a", "b"],
+        "avg_replace": ["n", "a", "p", "q"],
+        "avg_combined": ["n1", "m1", "n2", "m2"],
+        "avg_speed": ["x", "y"],
+        "mix_quantity": ["y", "q", "x", "z"],
+        "mix_replace": ["v", "a"],
+    }
+)
