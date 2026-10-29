@@ -100,3 +100,14 @@ def validate_question(q: Question) -> ValidationResult:
         errors.append("a distractor note is empty")
 
     return ValidationResult(errors)
+
+
+TEXT_PARAM_ORDER.update(
+    {
+        "ratio_share": ["total", "a", "b"],
+        "ratio_missing_term": ["a", "b", "x"],
+        "proportion": ["a", "b", "c"],
+        "ratio_difference": ["a", "b", "d"],
+        "ratio_chain": ["p", "q", "r", "s", "x"],
+    }
+)

@@ -60,3 +60,39 @@ def solve(subtype: str, params: dict) -> Fraction:
     except KeyError:
         raise UnknownSubtypeError(subtype) from None
     return fn(params)
+
+
+# ---------- ratios and proportion ----------
+
+def _ratio_share(p: dict) -> Fraction:
+    # first person's share = total x a/(a+b)
+    return Fraction(p["total"]) * Fraction(p["a"], p["a"] + p["b"])
+
+
+def _ratio_missing_term(p: dict) -> Fraction:
+    return Fraction(p["x"]) * Fraction(p["b"], p["a"])
+
+
+def _proportion(p: dict) -> Fraction:
+    # cross-multiplication: cost2 = cost1 x (items2 / items1)
+    return Fraction(p["b"]) * Fraction(p["c"], p["a"])
+
+
+def _ratio_difference(p: dict) -> Fraction:
+    return Fraction(p["d"]) * Fraction(p["a"], p["a"] - p["b"])
+
+
+def _ratio_chain(p: dict) -> Fraction:
+    # A/C = (A/B) x (B/C) = (p/q) x (r/s)
+    return Fraction(p["x"]) * Fraction(p["p"], p["q"]) * Fraction(p["r"], p["s"])
+
+
+_SOLVERS.update(
+    {
+        "ratio_share": _ratio_share,
+        "ratio_missing_term": _ratio_missing_term,
+        "proportion": _proportion,
+        "ratio_difference": _ratio_difference,
+        "ratio_chain": _ratio_chain,
+    }
+)

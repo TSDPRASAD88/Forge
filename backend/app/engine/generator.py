@@ -298,6 +298,25 @@ def _build_options(
 
 # ---------- public API ----------
 
+def _generators_for(topic: Topic) -> dict[str, Callable[[random.Random, Difficulty], Draft]]:
+    if topic == Topic.PERCENTAGES:
+        return GENERATORS
+    if topic == Topic.RATIOS:
+        from app.engine.ratios import RATIO_GENERATORS  # imported here to avoid a circular import
+
+        return RATIO_GENERATORS
+    raise ValueError(f"no generators for topic {topic}")
+
+
+def all_subtypes() -> dict[str, Topic]:
+    """Every subtype name mapped to the topic it belongs to."""
+    return {
+        name: topic
+        for topic in (Topic.PERCENTAGES, Topic.RATIOS)
+        for name in _generators_for(topic)
+    }
+
+
 def generate_question(
     exam: ExamType,
     difficulty: Difficulty,
@@ -308,16 +327,17 @@ def generate_question(
     profile = get_profile(exam)
     if topic not in profile.topics:
         raise ValueError(f"{topic} is not part of {exam}")
-    if subtype is not None and subtype not in GENERATORS:
-        raise ValueError(f"unknown subtype: {subtype}")
+    registry = _generators_for(topic)
+    if subtype is not None and subtype not in registry:
+        raise ValueError(f"unknown subtype for {topic}: {subtype}")
 
     if seed is None:
         seed = random.SystemRandom().randrange(2**32)
     rng = random.Random(seed)
-    name = subtype or rng.choice(sorted(GENERATORS))
+    name = subtype or rng.choice(sorted(registry))
 
     for _ in range(MAX_TRIES):
-        draft = GENERATORS[name](rng, difficulty)
+        draft = registry[name](rng, difficulty)
         if _is_clean(draft.answer):
             break
     else:

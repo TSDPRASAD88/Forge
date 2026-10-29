@@ -6,7 +6,8 @@ import type {
   Profile,
   Session,
   Stats,
-  Advice
+  Advice,
+  Topic,
 } from "./types";
 
 async function request<T>(
@@ -36,10 +37,13 @@ async function request<T>(
 export const getProfiles = () => request<Profile[]>("/profiles");
 
 export const getStats = () => request<Stats>("/stats");
-export const getAdvice = () => request<Advice>("/stats/advice", { method: "POST" });
+
+export const getAdvice = () =>
+  request<Advice>("/stats/advice", { method: "POST" });
 
 export const createSession = (body: {
   exam: Exam;
+  topic: Topic | null;
   difficulty: Difficulty | null;
   count: number;
 }) =>
