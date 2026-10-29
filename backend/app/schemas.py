@@ -50,6 +50,7 @@ class AnswerResult(BaseModel):
     correct_index: int
     correct_answer: str
     steps: list[SolutionStep]
+    explanation: str | None = None     # why the chosen option was wrong
 
 
 class HistoryItem(BaseModel):

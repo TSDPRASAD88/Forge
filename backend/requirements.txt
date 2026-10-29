@@ -4,3 +4,4 @@ pydantic-settings
 motor
 pytest
 httpxmongomock-motor
+google-genai

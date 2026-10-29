@@ -92,4 +92,11 @@ def validate_question(q: Question) -> ValidationResult:
         if q.steps[-1].result != q.answer.display():
             errors.append("last step result does not match the answer")
 
+    # 6) every wrong option must have a note; the correct one must not
+    wrong = {o for i, o in enumerate(q.options) if i != q.correct_index}
+    if set(q.distractor_notes) != wrong:
+        errors.append("distractor_notes do not match the wrong options")
+    elif any(not n.strip() for n in q.distractor_notes.values()):
+        errors.append("a distractor note is empty")
+
     return ValidationResult(errors)

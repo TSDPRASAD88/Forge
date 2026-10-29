@@ -12,6 +12,7 @@ MAX_TRIES = 200
 DIRECTIONS = ["increase", "decrease"]
 # bases where 100/base has a denominator dividing 100 (so answers display exactly)
 CLEAN_BASES = [8, 16, 20, 25, 40, 50, 80, 125, 200, 250, 400, 500, 1000]
+GENERIC_NOTE = "This value is close to the answer but not correct. Recheck each calculation step."
 
 
 class GenerationError(RuntimeError):
@@ -25,7 +26,7 @@ class Draft:
     unit: str
     answer: Fraction
     steps: list[SolutionStep]
-    traps: list[Fraction] = field(default_factory=list)  # common wrong answers
+    traps: list[tuple[Fraction, str]] = field(default_factory=list)  # (wrong value, why it's wrong)
     allow_negative: bool = False
 
 
@@ -67,7 +68,12 @@ def _percent_of_number(rng: random.Random, d: Difficulty) -> Draft:
             SolutionStep(description="Multiply the fraction by the number.",
                          expression=f"({p}/100) × {b}", result=_show(answer)),
         ],
-        traps=[answer * 10, answer / 10, Fraction(b) - answer, Fraction(b) + answer],
+        traps=[
+            (answer * 10, "The decimal point slipped: this is 10 times too big. Remember % means divide by 100."),
+            (answer / 10, "The decimal point slipped: this is 10 times too small. Remember % means divide by 100."),
+            (Fraction(b) - answer, "You subtracted the percentage from the number instead of just finding the percentage."),
+            (Fraction(b) + answer, "You added the percentage to the number instead of just finding the percentage."),
+        ],
     )
 
 
@@ -92,7 +98,11 @@ def _what_percent(rng: random.Random, d: Difficulty) -> Draft:
             SolutionStep(description="Multiply by 100 to convert to a percentage.",
                          expression=f"({x}/{y}) × 100", result=_show(answer)),
         ],
-        traps=[Fraction(100 * y, x), 100 - answer, Fraction(100 * x, x + y)],
+        traps=[
+            (Fraction(100 * y, x), "You flipped the fraction. Divide the part by the whole, not the whole by the part."),
+            (100 - answer, "You found the remaining percentage (100 minus the answer) instead of the percentage asked."),
+            (Fraction(100 * x, x + y), "You divided by the sum of both numbers. The whole is the number after 'of'."),
+        ],
     )
 
 
@@ -123,7 +133,11 @@ def _percent_change(rng: random.Random, d: Difficulty) -> Draft:
             SolutionStep(description="Divide by the ORIGINAL value and multiply by 100.",
                          expression=f"({diff}/{old}) × 100", result=_show(answer)),
         ],
-        traps=[Fraction(diff * 100, new), Fraction(diff * 100, old + new), Fraction(diff)],
+        traps=[
+            (Fraction(diff * 100, new), "You divided by the NEW value. Percentage change is always measured against the ORIGINAL value."),
+            (Fraction(diff * 100, old + new), "You divided by the sum of old and new. Divide by the original value only."),
+            (Fraction(diff), "You gave the raw change in value and forgot to convert it into a percentage."),
+        ],
     )
 
 
@@ -157,8 +171,12 @@ def _successive_change(rng: random.Random, d: Difficulty) -> Draft:
             SolutionStep(description="Subtract 1 and convert to a percentage.",
                          expression=f"({n1 * n2}/10000 − 1) × 100", result=_show(answer)),
         ],
-        traps=[Fraction(s1 * p1 + s2 * p2), -answer,
-               Fraction(s1 * p1 + s2 * p2) - Fraction(s1 * s2 * p1 * p2, 100)],
+        traps=[
+            (Fraction(s1 * p1 + s2 * p2), "You only added the two percentages. The second change applies to the already-changed price, so use multipliers."),
+            (-answer, "The sign is flipped. Check whether the combined multiplier is above or below 1."),
+            (Fraction(s1 * p1 + s2 * p2) - Fraction(s1 * s2 * p1 * p2, 100),
+             "You got the sign of the combined (ab/100) term wrong. Multiplying the two multipliers avoids this."),
+        ],
         allow_negative=True,
     )
 
@@ -175,9 +193,15 @@ def _find_original(rng: random.Random, d: Difficulty) -> Draft:
         n = _unit(p) * rng.randint(5, 50)
     x = p * n // 100
     answer = Fraction(n)  # chosen first; solver re-derives it from x and p
-    traps = [Fraction(x * p, 100), x + Fraction(x * p, 100), Fraction(x * 100, 100 + p)]
+    traps = [
+        (Fraction(x * p, 100), f"You took {p}% of {x}. You need the number whose {p}% is {x}, so divide instead."),
+        (x + Fraction(x * p, 100), f"You added {p}% of {x} to {x}. The given value is the part, not the original."),
+        (Fraction(x * 100, 100 + p), f"You treated {x} as the result of an increase by {p}%. Here {x} is {p}% OF the original."),
+    ]
     if p != 100:
-        traps.append(Fraction(x * 100, 100 - p))
+        traps.append(
+            (Fraction(x * 100, 100 - p), f"You treated {x} as the result of a decrease by {p}%. Here {x} is {p}% OF the original.")
+        )
     return Draft(
         params={"x": x, "p": p},
         text=f"{x} is {p}% of what number?",
@@ -216,7 +240,11 @@ def _discount_price(rng: random.Random, d: Difficulty) -> Draft:
             SolutionStep(description="Subtract the discount from the marked price.",
                          expression=f"{price} − {_show(amount)}", result=_show(answer)),
         ],
-        traps=[amount, Fraction(price * (100 + dsc), 100), Fraction(price - dsc)],
+        traps=[
+            (amount, "You stopped at the discount amount. The selling price is the marked price minus the discount."),
+            (Fraction(price * (100 + dsc), 100), "You added the discount instead of subtracting it."),
+            (Fraction(price - dsc), f"You subtracted {dsc} rupees. The discount is {dsc}% of the price, not {dsc} rupees."),
+        ],
     )
 
 
@@ -233,12 +261,15 @@ GENERATORS: dict[str, Callable[[random.Random, Difficulty], Draft]] = {
 # ---------- options ----------
 
 def _build_options(
-    rng: random.Random, answer: Fraction, traps: list[Fraction], allow_negative: bool
-) -> tuple[list[str], int]:
+    rng: random.Random,
+    answer: Fraction,
+    traps: list[tuple[Fraction, str]],
+    allow_negative: bool,
+) -> tuple[list[str], int, dict[str, str]]:
     seen = {_show(answer)}
-    distractors: list[Fraction] = []
+    distractors: list[tuple[Fraction, str]] = []
 
-    def consider(c: Fraction) -> None:
+    def consider(c: Fraction, note: str) -> None:
         if len(distractors) >= 3 or not _is_clean(c):
             return
         if c < 0 and not allow_negative:
@@ -247,21 +278,22 @@ def _build_options(
         if s in seen:
             return
         seen.add(s)
-        distractors.append(c)
+        distractors.append((c, note))
 
     shuffled = list(traps)
     rng.shuffle(shuffled)
-    for t in shuffled:                       # 1) realistic mistakes first
-        consider(t)
-    for q in (10, -10, 20, -20, 5, -5):      # 2) nearby values
-        consider(answer * Fraction(100 + q, 100))
-    for k in range(1, 100):                  # 3) guaranteed fallback
-        consider(answer + k)
-        consider(answer - k)
+    for value, note in shuffled:                 # 1) realistic mistakes first
+        consider(value, note)
+    for q in (10, -10, 20, -20, 5, -5):          # 2) nearby values
+        consider(answer * Fraction(100 + q, 100), GENERIC_NOTE)
+    for k in range(1, 100):                      # 3) guaranteed fallback
+        consider(answer + k, GENERIC_NOTE)
+        consider(answer - k, GENERIC_NOTE)
 
-    choices = [answer, *distractors]
+    choices = [answer, *(c for c, _ in distractors)]
     rng.shuffle(choices)
-    return [_show(c) for c in choices], choices.index(answer)
+    notes = {_show(c): note for c, note in distractors}
+    return [_show(c) for c in choices], choices.index(answer), notes
 
 
 # ---------- public API ----------
@@ -291,7 +323,7 @@ def generate_question(
     else:
         raise GenerationError(f"could not generate a clean {name} question")
 
-    options, idx = _build_options(rng, draft.answer, draft.traps, draft.allow_negative)
+    options, idx, notes = _build_options(rng, draft.answer, draft.traps, draft.allow_negative)
     return Question(
         exam=exam,
         topic=topic,
@@ -305,4 +337,5 @@ def generate_question(
         params=draft.params,
         steps=draft.steps,
         seed=seed,
+        distractor_notes=notes,
     )

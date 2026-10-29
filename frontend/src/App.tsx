@@ -1,26 +1,37 @@
+
 import { useState } from "react";
 import Practice from "./components/Practice";
 import Setup from "./components/Setup";
+import Dashboard from "./components/Dashboard";
 import type { AnswerResult, Session } from "./types";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [results, setResults] = useState<AnswerResult[] | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   let view;
-  if (results && session) {
+
+  if (showStats) {
+    view = <Dashboard onBack={() => setShowStats(false)} />;
+  } else if (results && session) {
     const correct = results.filter((r) => r.correct).length;
     const skipped = results.filter((r) => r.skipped).length;
     const marks = results.reduce((sum, r) => sum + r.marks, 0);
+
     view = (
       <div className="w-full max-w-xl space-y-4 text-center">
         <h1 className="text-3xl font-bold">Session complete</h1>
+
         <p className="text-5xl font-bold text-emerald-400">
           {correct}/{session.questions.length}
         </p>
+
         <p className="text-slate-400">
-          {marks.toFixed(2)} marks · {skipped} skipped · {results.length - correct - skipped} wrong
+          {marks.toFixed(2)} marks · {skipped} skipped ·{" "}
+          {results.length - correct - skipped} wrong
         </p>
+
         <button
           onClick={() => {
             setSession(null);
@@ -33,9 +44,26 @@ export default function App() {
       </div>
     );
   } else if (session) {
-    view = <Practice key={session.id} session={session} onFinish={setResults} />;
+    view = (
+      <Practice
+        key={session.id}
+        session={session}
+        onFinish={setResults}
+      />
+    );
   } else {
-    view = <Setup onStart={setSession} />;
+    view = (
+      <div className="w-full max-w-xl space-y-4">
+        <Setup onStart={setSession} />
+
+        <button
+          onClick={() => setShowStats(true)}
+          className="w-full text-sm text-slate-400 underline hover:text-slate-200"
+        >
+          View my progress
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -55,6 +55,7 @@ class Question(BaseModel):
     params: dict[str, int | str]       # generator inputs, so the solver can recompute
     steps: list[SolutionStep] = Field(default_factory=list)
     seed: int | None = None
+    distractor_notes: dict[str, str] = Field(default_factory=dict)  # option text -> why it's wrong
 
     @model_validator(mode="after")
     def _check_options(self) -> "Question":

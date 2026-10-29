@@ -41,4 +41,29 @@ export interface AnswerResult {
   correct_index: number;
   correct_answer: string;
   steps: SolutionStep[];
+  explanation: string | null;
+}
+
+export interface StatRow {
+  key: string;
+  attempted: number;
+  correct: number;
+  skipped: number;
+  accuracy: number;
+  marks: number;
+  avg_time_seconds: number | null;
+}
+
+export interface Stats {
+  overall: StatRow;
+  by_subtype: StatRow[];
+  by_difficulty: StatRow[];
+  weak_topics: StatRow[];
+  activity: { date: string; attempted: number; correct: number }[];
+}
+
+export interface Advice {
+  summary: string;
+  actions: string[];
+  cached: boolean;
 }

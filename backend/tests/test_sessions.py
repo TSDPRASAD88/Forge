@@ -101,3 +101,20 @@ def test_history_lists_answers_and_filters_by_session(client):
     assert len(only_s1) == 2
     assert all(item["session_id"] == s1["id"] for item in only_s1)
     assert only_s1[0]["time_taken_seconds"] == 12.5
+
+
+def test_wrong_answer_gets_explanation(client):
+    s = start(client, count=8)
+    wrong_seen = 0
+    for q in s["questions"]:
+        assert "distractor_notes" not in q            # notes must not leak before answering
+        r = client.post(
+            f"/api/sessions/{s['id']}/answers",
+            json={"question_id": q["id"], "selected_index": 0},
+        ).json()
+        if r["correct"]:
+            assert r["explanation"] is None
+        else:
+            wrong_seen += 1
+            assert r["explanation"]
+    assert wrong_seen >= 1
