@@ -17,12 +17,25 @@ def test_topic_filter_gives_only_that_topic(client):
 
 
 def test_mixed_topics_include_all(client):
-    s = start(client, count=40)
-    assert {q["topic"] for q in s["questions"]} == {
-        "percentages",
-        "ratios",
-        "profit_loss",
-    }
+    topics = set()
+    for _ in range(2):
+        topics |= {q["topic"] for q in start(client, count=50)["questions"]}
+    assert topics == {"percentages", "ratios", "profit_loss", "time_work", "averages_mixtures"}
+
+
+def test_averages_mixtures_topic_filter(client):
+    from app.engine.averages import AM_GENERATORS
+
+    s = start(client, topic="averages_mixtures", count=10)
+    assert {q["topic"] for q in s["questions"]} == {"averages_mixtures"}
+    assert {q["subtype"] for q in s["questions"]} <= set(AM_GENERATORS)
+
+def test_time_work_topic_filter(client):
+    from app.engine.time_work import TW_GENERATORS
+
+    s = start(client, topic="time_work", count=10)
+    assert {q["topic"] for q in s["questions"]} == {"time_work"}
+    assert {q["subtype"] for q in s["questions"]} <= set(TW_GENERATORS)
 
 
 def test_profit_loss_topic_filter(client):

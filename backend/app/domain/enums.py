@@ -10,6 +10,8 @@ class Topic(StrEnum):
     PERCENTAGES = "percentages"
     RATIOS = "ratios"
     PROFIT_LOSS = "profit_loss"
+    TIME_WORK = "time_work"
+    AVERAGES_MIXTURES = "averages_mixtures"
     # more topics later: RATIOS, PROFIT_LOSS, TIME_WORK, ...
 
 

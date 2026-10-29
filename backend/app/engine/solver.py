@@ -139,3 +139,78 @@ _SOLVERS.update(
         "pl_two_articles": _pl_two_articles,
     }
 )
+
+# ---------- time and work ----------
+
+def _tw_together(p: dict) -> Fraction:
+    return 1 / (Fraction(1, p["x"]) + Fraction(1, p["y"]))
+
+
+def _tw_alone(p: dict) -> Fraction:
+    return 1 / (Fraction(1, p["t"]) - Fraction(1, p["x"]))
+
+
+def _tw_leaving(p: dict) -> Fraction:
+    done = p["d"] * (Fraction(1, p["x"]) + Fraction(1, p["y"]))
+    return (1 - done) * p["y"]
+
+
+def _tw_wages(p: dict) -> Fraction:
+    rate_a, rate_b = Fraction(1, p["x"]), Fraction(1, p["y"])
+    return Fraction(p["w"]) * rate_a / (rate_a + rate_b)
+
+
+def _tw_pipes(p: dict) -> Fraction:
+    return 1 / (Fraction(1, p["f"]) - Fraction(1, p["e"]))
+
+
+_SOLVERS.update(
+    {
+        "tw_together": _tw_together,
+        "tw_alone": _tw_alone,
+        "tw_leaving": _tw_leaving,
+        "tw_wages": _tw_wages,
+        "tw_pipes": _tw_pipes,
+    }
+)
+
+# ---------- averages and mixtures ----------
+
+def _avg_new_member(p: dict) -> Fraction:
+    # new number = new average + n x (change in average)
+    return Fraction(p["b"]) + p["n"] * (p["b"] - p["a"])
+
+
+def _avg_replace(p: dict) -> Fraction:
+    # recompute the total, swap the number, divide again
+    return Fraction(p["n"] * p["a"] - p["p"] + p["q"], p["n"])
+
+
+def _avg_combined(p: dict) -> Fraction:
+    return Fraction(p["n1"] * p["m1"] + p["n2"] * p["m2"], p["n1"] + p["n2"])
+
+
+def _avg_speed(p: dict) -> Fraction:
+    # total distance / total time, taking a one-way distance of 1
+    return 2 / (Fraction(1, p["x"]) + Fraction(1, p["y"]))
+
+
+def _mix_quantity(p: dict) -> Fraction:
+    # q*x + w*y = z*(q + w)  =>  w = q*(z - x)/(y - z)
+    return Fraction(p["q"] * (p["z"] - p["x"]), p["y"] - p["z"])
+
+
+def _mix_replace(p: dict) -> Fraction:
+    return Fraction(p["v"]) * (1 - Fraction(p["a"], p["v"])) ** 2
+
+
+_SOLVERS.update(
+    {
+        "avg_new_member": _avg_new_member,
+        "avg_replace": _avg_replace,
+        "avg_combined": _avg_combined,
+        "avg_speed": _avg_speed,
+        "mix_quantity": _mix_quantity,
+        "mix_replace": _mix_replace,
+    }
+)

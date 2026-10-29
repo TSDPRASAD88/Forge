@@ -183,7 +183,7 @@ export default function Practice({ session, onFinish }: Props) {
                 : "Incorrect"}{" "}
             <span className="font-mono text-sm">
               ({result.marks > 0 ? "+" : ""}
-              {result.marks} marks)
+              {Number(result.marks.toFixed(2))} marks)
             </span>
           </p>
 

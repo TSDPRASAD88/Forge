@@ -4,7 +4,7 @@ import { getAdvice, getStats } from "../api";
 import type { Advice, StatRow, Stats } from "../types";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
-const label = (k: string) => k.replace(/_/g, " ");
+const label = (k: string) => k.replace(/^(pl|tw)_/, "").replace(/_/g, " ");
 
 function Card({ title, value }: { title: string; value: string }) {
   return (
