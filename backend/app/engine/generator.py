@@ -301,21 +301,21 @@ def _build_options(
 def _generators_for(topic: Topic) -> dict[str, Callable[[random.Random, Difficulty], Draft]]:
     if topic == Topic.PERCENTAGES:
         return GENERATORS
+    # imported here to avoid circular imports
     if topic == Topic.RATIOS:
-        from app.engine.ratios import RATIO_GENERATORS  # imported here to avoid a circular import
+        from app.engine.ratios import RATIO_GENERATORS
 
         return RATIO_GENERATORS
+    if topic == Topic.PROFIT_LOSS:
+        from app.engine.profit_loss import PL_GENERATORS
+
+        return PL_GENERATORS
     raise ValueError(f"no generators for topic {topic}")
 
 
 def all_subtypes() -> dict[str, Topic]:
     """Every subtype name mapped to the topic it belongs to."""
-    return {
-        name: topic
-        for topic in (Topic.PERCENTAGES, Topic.RATIOS)
-        for name in _generators_for(topic)
-    }
-
+    return {name: topic for topic in Topic for name in _generators_for(topic)}
 
 def generate_question(
     exam: ExamType,

@@ -18,6 +18,7 @@ const TOPICS: { value: Topic | null; label: string }[] = [
   { value: null, label: "Mixed" },
   { value: "percentages", label: "Percentages" },
   { value: "ratios", label: "Ratios & proportion" },
+  { value: "profit_loss", label: "Profit & loss" },
 ];
 
 export default function Setup({ onStart }: Props) {

@@ -96,3 +96,46 @@ _SOLVERS.update(
         "ratio_chain": _ratio_chain,
     }
 )
+
+# ---------- profit and loss ----------
+
+def _pl_profit_percent(p: dict) -> Fraction:
+    return (Fraction(p["sp"], p["cp"]) - 1) * 100
+
+
+def _pl_loss_percent(p: dict) -> Fraction:
+    return (1 - Fraction(p["sp"], p["cp"])) * 100
+
+
+def _pl_selling_price(p: dict) -> Fraction:
+    return Fraction(p["cp"]) * (1 + Fraction(p["p"], 100))
+
+
+def _pl_cost_price(p: dict) -> Fraction:
+    return Fraction(p["sp"]) / (1 - Fraction(p["l"], 100))
+
+
+def _pl_markup_discount(p: dict) -> Fraction:
+    marked = 1 + Fraction(p["m"], 100)
+    after_discount = marked * (1 - Fraction(p["d"], 100))
+    return (after_discount - 1) * 100
+
+
+def _pl_two_articles(p: dict) -> Fraction:
+    # derive from cost prices: each article sells for 1 unit
+    cp_gain = Fraction(100, 100 + p["p"])
+    cp_loss = Fraction(100, 100 - p["p"])
+    total_cp = cp_gain + cp_loss
+    return (total_cp - 2) / total_cp * 100
+
+
+_SOLVERS.update(
+    {
+        "pl_profit_percent": _pl_profit_percent,
+        "pl_loss_percent": _pl_loss_percent,
+        "pl_selling_price": _pl_selling_price,
+        "pl_cost_price": _pl_cost_price,
+        "pl_markup_discount": _pl_markup_discount,
+        "pl_two_articles": _pl_two_articles,
+    }
+)
