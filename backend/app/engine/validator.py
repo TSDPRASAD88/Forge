@@ -143,3 +143,14 @@ TEXT_PARAM_ORDER.update(
         "mix_replace": ["v", "a"],
     }
 )
+
+TEXT_PARAM_ORDER.update(
+    {
+        "int_si": ["p", "t", "r"],
+        "int_si_rate": ["p", "si", "t"],
+        "int_si_time": ["p", "si", "r"],
+        "int_ci_amount": ["p", "n", "r"],
+        "int_ci_diff": ["p", "n", "r"],
+        "int_si_multiple": ["k", "r"],
+    }
+)

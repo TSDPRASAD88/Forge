@@ -20,8 +20,17 @@ def test_mixed_topics_include_all(client):
     topics = set()
     for _ in range(2):
         topics |= {q["topic"] for q in start(client, count=50)["questions"]}
-    assert topics == {"percentages", "ratios", "profit_loss", "time_work", "averages_mixtures"}
+    assert topics == {
+        "percentages", "ratios", "profit_loss", "time_work", "averages_mixtures", "interest",
+    }
 
+
+def test_interest_topic_filter(client):
+    from app.engine.interest import INT_GENERATORS
+
+    s = start(client, topic="interest", count=10)
+    assert {q["topic"] for q in s["questions"]} == {"interest"}
+    assert {q["subtype"] for q in s["questions"]} <= set(INT_GENERATORS)
 
 def test_averages_mixtures_topic_filter(client):
     from app.engine.averages import AM_GENERATORS

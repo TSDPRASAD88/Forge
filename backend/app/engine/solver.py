@@ -214,3 +214,43 @@ _SOLVERS.update(
         "mix_replace": _mix_replace,
     }
 )
+
+# ---------- simple and compound interest ----------
+
+def _int_si(p: dict) -> Fraction:
+    return Fraction(p["p"]) * Fraction(p["r"], 100) * p["t"]
+
+
+def _int_si_rate(p: dict) -> Fraction:
+    return Fraction(p["si"]) / (p["p"] * Fraction(p["t"], 100))
+
+
+def _int_si_time(p: dict) -> Fraction:
+    return Fraction(p["si"]) / (p["p"] * Fraction(p["r"], 100))
+
+
+def _int_ci_amount(p: dict) -> Fraction:
+    return Fraction(p["p"]) * (1 + Fraction(p["r"], 100)) ** p["n"]
+
+
+def _int_ci_diff(p: dict) -> Fraction:
+    principal, rate = Fraction(p["p"]), Fraction(p["r"], 100)
+    compound = principal * ((1 + rate) ** p["n"] - 1)
+    simple = principal * rate * p["n"]
+    return compound - simple
+
+
+def _int_si_multiple(p: dict) -> Fraction:
+    return (p["k"] - 1) / Fraction(p["r"], 100)
+
+
+_SOLVERS.update(
+    {
+        "int_si": _int_si,
+        "int_si_rate": _int_si_rate,
+        "int_si_time": _int_si_time,
+        "int_ci_amount": _int_ci_amount,
+        "int_ci_diff": _int_ci_diff,
+        "int_si_multiple": _int_si_multiple,
+    }
+)

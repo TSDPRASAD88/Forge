@@ -326,6 +326,10 @@ def _generators_for(topic: Topic) -> dict[str, Callable[[random.Random, Difficul
         from app.engine.averages import AM_GENERATORS
 
         return AM_GENERATORS
+    if topic == Topic.INTEREST:
+        from app.engine.interest import INT_GENERATORS
+
+        return INT_GENERATORS
     raise ValueError(f"no generators for topic {topic}")
 
 
