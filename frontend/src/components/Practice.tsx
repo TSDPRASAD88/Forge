@@ -1,6 +1,6 @@
 
 import { useRef, useState } from "react";
-import { submitAnswer } from "../api";
+import { explainQuestion, submitAnswer } from "../api";
 import type { AnswerResult, Session } from "../types";
 
 interface Props {
@@ -15,6 +15,11 @@ export default function Practice({ session, onFinish }: Props) {
   const [results, setResults] = useState<AnswerResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [ai, setAi] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   const startedAt = useRef(Date.now());
 
   const q = session.questions[index];
@@ -38,11 +43,29 @@ export default function Practice({ session, onFinish }: Props) {
       setResults((prev) => [...prev, r]);
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Could not submit answer"
+        e instanceof Error ? e.message : "Could not submit answer",
       );
       setSelected(null);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function explainWithAI() {
+    if (aiBusy || ai) return;
+
+    setAiBusy(true);
+    setAiError(null);
+
+    try {
+      const r = await explainQuestion(session.id, q.id);
+      setAi(r.explanation);
+    } catch (e) {
+      setAiError(
+        e instanceof Error ? e.message : "AI unavailable",
+      );
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -56,6 +79,10 @@ export default function Practice({ session, onFinish }: Props) {
     setSelected(null);
     setResult(null);
     setError(null);
+
+    setAi(null);
+    setAiError(null);
+
     startedAt.current = Date.now();
   }
 
@@ -169,7 +196,9 @@ export default function Practice({ session, onFinish }: Props) {
 
           {result.explanation && (
             <p className="rounded bg-red-400/10 p-3 text-sm text-red-200">
-              <span className="font-semibold">Why that was wrong: </span>
+              <span className="font-semibold">
+                Why that was wrong:{" "}
+              </span>
               {result.explanation}
             </p>
           )}
@@ -193,6 +222,29 @@ export default function Practice({ session, onFinish }: Props) {
               </li>
             ))}
           </ol>
+
+          {ai && (
+            <div className="rounded bg-sky-400/10 p-3 text-sm text-sky-100">
+              <span className="font-semibold">
+                AI explanation (final answer checked):{" "}
+              </span>
+              {ai}
+            </div>
+          )}
+
+          {aiError && (
+            <p className="text-sm text-amber-300">{aiError}</p>
+          )}
+
+          {!ai && (
+            <button
+              onClick={explainWithAI}
+              disabled={aiBusy}
+              className="text-sm text-sky-300 underline hover:text-sky-200 disabled:opacity-50"
+            >
+              {aiBusy ? "Asking Gemini..." : "Explain differently (AI)"}
+            </button>
+          )}
 
           <button
             onClick={next}

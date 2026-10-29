@@ -61,3 +61,9 @@ export interface Stats {
   weak_topics: StatRow[];
   activity: { date: string; attempted: number; correct: number }[];
 }
+
+export interface Advice {
+  summary: string;
+  actions: string[];
+  cached: boolean;
+}
