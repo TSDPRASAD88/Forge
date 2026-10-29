@@ -24,6 +24,7 @@ class PublicQuestion(BaseModel):
 
 class SessionCreate(BaseModel):
     exam: ExamType
+    topic: Topic | None = None    # None = mix every topic in the exam profile
     difficulty: Difficulty | None = None   # None = use the exam profile's mix
     subtype: str | None = None
     count: int = Field(default=10, ge=1, le=50)

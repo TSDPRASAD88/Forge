@@ -9,7 +9,7 @@ from pymongo.errors import DuplicateKeyError
 from app.db.mongo import get_db
 from app.domain.models import Question
 from app.domain.profiles import get_profile
-from app.engine.generator import GENERATORS
+from app.engine.generator import all_subtypes
 from app.schemas import (
     AnswerResult,
     AnswerSubmit,
@@ -33,11 +33,20 @@ async def _load_session(db: AsyncIOMotorDatabase, session_id: str) -> dict:
 async def create_session(
     body: SessionCreate, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> SessionPublic:
-    if body.subtype is not None and body.subtype not in GENERATORS:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Unknown subtype: {body.subtype}",
-        )
+    if body.subtype is not None:
+        owner = all_subtypes().get(body.subtype)
+
+        if owner is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unknown subtype: {body.subtype}",
+            )
+
+        if body.topic is not None and body.topic != owner:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Subtype {body.subtype} belongs to {owner}, not {body.topic}",
+            )
 
     try:
         questions = build_questions(
@@ -45,7 +54,10 @@ async def create_session(
             body.count,
             body.difficulty,
             body.subtype,
+            body.topic,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except QuestionBuildError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -75,6 +87,7 @@ async def read_session(
     session_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ) -> SessionPublic:
     doc = await _load_session(db, session_id)
+
     answers = await db.answers.find(
         {"session_id": session_id}
     ).to_list(length=None)
@@ -103,6 +116,7 @@ async def submit_answer(
         (q for q in doc["questions"] if q["id"] == body.question_id),
         None,
     )
+
     if raw is None:
         raise HTTPException(
             status_code=404,
