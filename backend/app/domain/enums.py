@@ -9,6 +9,7 @@ class ExamType(StrEnum):
 class Topic(StrEnum):
     PERCENTAGES = "percentages"
     RATIOS = "ratios"
+    PROFIT_LOSS = "profit_loss"
     # more topics later: RATIOS, PROFIT_LOSS, TIME_WORK, ...
 
 

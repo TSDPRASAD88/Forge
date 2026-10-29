@@ -111,3 +111,14 @@ TEXT_PARAM_ORDER.update(
         "ratio_chain": ["p", "q", "r", "s", "x"],
     }
 )
+
+TEXT_PARAM_ORDER.update(
+    {
+        "pl_profit_percent": ["cp", "sp"],
+        "pl_loss_percent": ["cp", "sp"],
+        "pl_selling_price": ["cp", "p"],
+        "pl_cost_price": ["sp", "l"],
+        "pl_markup_discount": ["m", "d"],
+        "pl_two_articles": ["p", "p"],
+    }
+)

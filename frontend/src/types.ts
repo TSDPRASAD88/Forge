@@ -1,7 +1,7 @@
 
 export type Exam = "gate_cse" | "ssc_cgl";
 export type Difficulty = "easy" | "medium" | "hard";
-export type Topic = "percentages" | "ratios";
+export type Topic = "percentages" | "ratios" | "profit_loss";
 
 export interface Profile {
   exam: Exam;
