@@ -1,7 +1,8 @@
 
 export type Exam = "gate_cse" | "ssc_cgl";
 export type Difficulty = "easy" | "medium" | "hard";
-export type Topic = "percentages" | "ratios" | "profit_loss" | "time_work" | "averages_mixtures" | "interest";;
+export type Topic = "percentages" | "ratios" | "profit_loss" | "time_work" | "averages_mixtures" | "interest";
+export type Mode = "standard" | "weak" | "retry";
 
 export interface Profile {
   exam: Exam;
@@ -68,4 +69,33 @@ export interface Advice {
   summary: string;
   actions: string[];
   cached: boolean;
+}
+
+export interface MistakePattern {
+  tag: string;
+  subtype: string;
+  count: number;
+  note: string | null;
+  example: string | null;
+}
+
+export interface PaceRow {
+  count: number;
+  accuracy: number | null;
+}
+
+export interface Insights {
+  patterns: MistakePattern[];
+  tagged_wrong: number;
+  untagged_wrong: number;
+  pace: {
+    timed_answers: number;
+    budget_seconds: number | null;
+    rushed: PaceRow;
+    steady: PaceRow;
+    slow: PaceRow;
+    rushed_wrong: number;
+    option_picks: Record<string, number>;
+    flags: string[];
+  };
 }

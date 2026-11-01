@@ -30,17 +30,20 @@ def build_questions(
     subtype: str | None = None,
     topic: Topic | None = None,
     avoid: set[tuple] | None = None,
+    weights: dict[tuple[str, Difficulty | None], float] | None = None,
 ) -> list[Question]:
     """Generate `count` validated questions.
 
-    Preference order for each slot: a question whose numbers are new, then one seen in a recent
-    session (`avoid`), then a repeat from this session. The fallbacks keep tiny question pools working.
+    With `weights`, every slot first picks a (subtype, difficulty) pair at random, weighted.
+    Preference order inside a slot: numbers never seen, then seen in a recent session (`avoid`),
+    then a repeat from this session. The fallbacks keep tiny question pools working.
     """
     rng = random.SystemRandom()
     avoid = avoid or set()
+    owners = all_subtypes()
     profile_topics = get_profile(exam).topics
     if subtype is not None:
-        owner = all_subtypes().get(subtype)
+        owner = owners.get(subtype)
         if owner is None:
             raise ValueError(f"unknown subtype: {subtype}")
         topic = owner                      # a subtype belongs to exactly one topic
@@ -49,15 +52,21 @@ def build_questions(
     seen: set[tuple] = set()
 
     for _ in range(count):
+        slot_subtype, slot_topic, slot_difficulty = subtype, topic, difficulty
+        if weights:
+            slot_subtype, key_difficulty = rng.choices(list(weights), weights=list(weights.values()))[0]
+            slot_topic = owners[slot_subtype]
+            slot_difficulty = key_difficulty or difficulty
+
         fresh: Question | None = None
         recent: Question | None = None
         repeat: Question | None = None
         for _attempt in range(MAX_ATTEMPTS_PER_QUESTION):
             q = generate_question(
                 exam,
-                difficulty or pick_difficulty(exam, rng),
-                topic=topic or rng.choice(profile_topics),
-                subtype=subtype,
+                slot_difficulty or pick_difficulty(exam, rng),
+                topic=slot_topic or rng.choice(profile_topics),
+                subtype=slot_subtype,
             )
             if not validate_question(q).ok:
                 continue

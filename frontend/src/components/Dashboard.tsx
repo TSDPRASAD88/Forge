@@ -1,10 +1,10 @@
 
 import { useEffect, useState } from "react";
-import { getAdvice, getStats } from "../api";
-import type { Advice, StatRow, Stats } from "../types";
+import { getAdvice, getInsights, getStats } from "../api";
+import type { Advice, Insights, PaceRow, StatRow, Stats } from "../types";
+import { subtypeLabel as label } from "../labels";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
-const label = (k: string) => k.replace(/^(pl|tw)_/, "").replace(/_/g, " ");
 
 function Card({ title, value }: { title: string; value: string }) {
   return (
@@ -33,7 +33,7 @@ function Bars({ title, rows }: { title: string; rows: StatRow[] }) {
       {rows.map((r) => (
         <div key={r.key}>
           <div className="flex justify-between text-sm">
-            <span className="capitalize">{label(r.key)}</span>
+            <span>{label(r.key)}</span>
             <span className="font-mono text-slate-400">
               {pct(r.accuracy)} · {r.correct}/{r.attempted}
               {r.avg_time_seconds != null && ` · ${r.avg_time_seconds}s`}
@@ -56,6 +56,32 @@ function Bars({ title, rows }: { title: string; rows: StatRow[] }) {
   );
 }
 
+function PaceCell({
+  title,
+  hint,
+  row,
+}: {
+  title: string;
+  hint: string;
+  row: PaceRow;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+      <div className="text-xs uppercase tracking-wide text-slate-400">
+        {title}
+      </div>
+
+      <div className="text-xl font-bold text-emerald-400">
+        {row.accuracy != null ? pct(row.accuracy) : "-"}
+      </div>
+
+      <div className="text-xs text-slate-500">
+        {row.count} answers · {hint}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({
   onBack,
 }: {
@@ -68,12 +94,20 @@ export default function Dashboard({
   const [adviceBusy, setAdviceBusy] = useState(false);
   const [adviceError, setAdviceError] = useState<string | null>(null);
 
+  const [insights, setInsights] = useState<Insights | null>(null);
+
   useEffect(() => {
     getStats()
       .then(setStats)
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : "Failed to load stats");
+        setError(
+          e instanceof Error ? e.message : "Failed to load stats"
+        );
       });
+
+    getInsights()
+      .then(setInsights)
+      .catch(() => setInsights(null));
   }, []);
 
   async function loadAdvice() {
@@ -101,6 +135,8 @@ export default function Dashboard({
 
   const o = stats.overall;
   const maxDay = Math.max(1, ...stats.activity.map((d) => d.attempted));
+
+  const budget = insights?.pace.budget_seconds ?? null;
 
   return (
     <div className="w-full max-w-2xl space-y-6">
@@ -137,7 +173,7 @@ export default function Dashboard({
 
           <ul className="mt-1 text-sm text-slate-300">
             {stats.weak_topics.map((w) => (
-              <li key={w.key} className="capitalize">
+              <li key={w.key}>
                 {label(w.key)}: {pct(w.accuracy)} over {w.attempted} questions
               </li>
             ))}
@@ -184,7 +220,94 @@ export default function Dashboard({
         </button>
       </section>
 
+      {/* Repeated mistake patterns and trap analysis */}
+      {insights && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Your repeated mistakes
+          </h2>
+
+          {insights.patterns.length === 0 && (
+            <p className="text-sm text-slate-500">
+              No tagged mistakes yet. They are recorded as you practise.
+            </p>
+          )}
+
+          {insights.patterns.map((p) => (
+            <div
+              key={p.tag}
+              className="rounded-lg border border-slate-800 bg-slate-900 p-3"
+            >
+              <div className="flex justify-between text-sm">
+                <span>{label(p.subtype)}</span>
+                <span className="font-mono text-red-300">
+                  {p.count}×
+                </span>
+              </div>
+
+              {p.note && (
+                <p className="mt-1 text-sm text-slate-300">
+                  {p.note}
+                </p>
+              )}
+
+              {p.example && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Example: {p.example}
+                </p>
+              )}
+            </div>
+          ))}
+
+          {insights.untagged_wrong > 0 && (
+            <p className="text-xs text-slate-500">
+              {insights.untagged_wrong} wrong answers matched no standard
+              mistake (or were answered before tags existed).
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* Pace and accuracy analysis */}
+      {insights && insights.pace.timed_answers > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Pace and accuracy
+          </h2>
+
+          <div className="grid grid-cols-3 gap-3">
+            <PaceCell
+              title="Rushed"
+              row={insights.pace.rushed}
+              hint={budget ? `under ${Math.floor(budget / 4)}s` : "very fast"}
+            />
+
+            <PaceCell
+              title="Steady"
+              row={insights.pace.steady}
+              hint={budget ? `up to ${budget}s` : "within the time"}
+            />
+
+            <PaceCell
+              title="Slow"
+              row={insights.pace.slow}
+              hint={budget ? `over ${budget}s` : "over the time"}
+            />
+          </div>
+
+          {insights.pace.flags.map((f, i) => (
+            <p
+              key={i}
+              className="rounded-lg bg-amber-400/10 p-3 text-sm text-amber-200"
+            >
+              {f}
+            </p>
+          ))}
+        </section>
+      )}
+
       <Bars title="By question type" rows={stats.by_subtype} />
+
       <Bars title="By difficulty" rows={stats.by_difficulty} />
 
       <section className="space-y-2">

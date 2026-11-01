@@ -19,6 +19,8 @@ from app.schemas import (
 )
 from app.services.practice import QuestionBuildError, build_questions
 from app.services.practice import QuestionBuildError, build_questions, fingerprint
+from app.services.smart import retry_session_size, retry_weights, weak_weights
+SMART_WINDOW = 300          # most recent answers considered by the smart modes
 RECENT_SESSIONS = 10
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -36,41 +38,57 @@ async def create_session(
 ) -> SessionPublic:
     if body.subtype is not None:
         owner = all_subtypes().get(body.subtype)
-
         if owner is None:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Unknown subtype: {body.subtype}",
-            )
-
+            raise HTTPException(status_code=422, detail=f"Unknown subtype: {body.subtype}")
         if body.topic is not None and body.topic != owner:
             raise HTTPException(
-                status_code=422,
-                detail=f"Subtype {body.subtype} belongs to {owner}, not {body.topic}",
+                status_code=422, detail=f"Subtype {body.subtype} belongs to {owner}, not {body.topic}"
+            )
+        if body.mode != "standard":
+            raise HTTPException(
+                status_code=422, detail="Choose a specific question type or a smart mode, not both"
             )
 
-    recent_docs = (
-        await db.sessions.find({})
-        .sort("created_at", -1)
-        .limit(RECENT_SESSIONS)
-        .to_list(length=RECENT_SESSIONS)
-    )
+    count, topic, difficulty, weights = body.count, body.topic, body.difficulty, None
+    if body.mode != "standard":
+        profile_topics = get_profile(body.exam).topics
+        recent_answers = (
+            await db.answers.find({"exam": body.exam.value})
+            .sort("answered_at", -1)
+            .limit(SMART_WINDOW)
+            .to_list(length=SMART_WINDOW)
+        )
+        if body.mode == "weak":
+            allowed = {
+                name
+                for name, owner_topic in all_subtypes().items()
+                if owner_topic in profile_topics and (body.topic is None or owner_topic == body.topic)
+            }
+            weights = weak_weights(recent_answers, allowed)
+            if not weights:
+                raise HTTPException(status_code=422, detail="No question types match that topic")
+        else:  # retry
+            allowed = {name for name, owner_topic in all_subtypes().items() if owner_topic in profile_topics}
+            weights = retry_weights(recent_answers, allowed)
+            if not weights:
+                raise HTTPException(
+                    status_code=409,
+                    detail="No open mistakes to retry. Answer some questions first, or try My weak topics.",
+                )
+            count = min(count, retry_session_size(weights))
+            difficulty = None              # each open mistake carries its own difficulty
+        topic = None                       # the weights decide the question types
 
+    recent_docs = (
+        await db.sessions.find({}).sort("created_at", -1).limit(RECENT_SESSIONS).to_list(length=RECENT_SESSIONS)
+    )
     avoid = {
         fingerprint(raw.get("subtype", ""), raw.get("params") or {})
         for doc in recent_docs
         for raw in doc.get("questions", [])
     }
-
     try:
-        questions = build_questions(
-            body.exam,
-            body.count,
-            body.difficulty,
-            body.subtype,
-            body.topic,
-            avoid,
-        )
+        questions = build_questions(body.exam, count, difficulty, body.subtype, topic, avoid, weights)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except QuestionBuildError as exc:
@@ -78,16 +96,15 @@ async def create_session(
 
     session_id = uuid4().hex
     now = datetime.now(timezone.utc)
-
     await db.sessions.insert_one(
         {
             "_id": session_id,
             "exam": body.exam.value,
+            "mode": body.mode,
             "created_at": now,
             "questions": [q.model_dump(mode="json") for q in questions],
         }
     )
-
     return SessionPublic(
         id=session_id,
         exam=body.exam,
@@ -95,7 +112,6 @@ async def create_session(
         questions=[PublicQuestion.from_question(q) for q in questions],
         answered=[],
     )
-
 
 @router.get("/{session_id}", response_model=SessionPublic)
 async def read_session(
