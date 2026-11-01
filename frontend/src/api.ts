@@ -8,6 +8,8 @@ import type {
   Stats,
   Advice,
   Topic,
+  Mode,
+  Insights
 } from "./types";
 
 async function request<T>(
@@ -41,16 +43,15 @@ export const getStats = () => request<Stats>("/stats");
 export const getAdvice = () =>
   request<Advice>("/stats/advice", { method: "POST" });
 
+export const getInsights = () => request<Insights>("/stats/insights");
+
 export const createSession = (body: {
   exam: Exam;
+  mode: Mode;
   topic: Topic | null;
   difficulty: Difficulty | null;
   count: number;
-}) =>
-  request<Session>("/sessions", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+}) => request<Session>("/sessions", { method: "POST", body: JSON.stringify(body) })
 
 export const submitAnswer = (
   sessionId: string,

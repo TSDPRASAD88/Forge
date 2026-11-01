@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.domain.enums import Difficulty, ExamType, Topic
 from app.domain.models import Question, SolutionStep
-
+from typing import Literal
 
 class PublicQuestion(BaseModel):
     """What the client may see BEFORE answering: no answer, params or steps."""
@@ -24,6 +24,7 @@ class PublicQuestion(BaseModel):
 
 class SessionCreate(BaseModel):
     exam: ExamType
+    mode: Literal["standard", "weak", "retry"] = "standard"
     topic: Topic | None = None    # None = mix every topic in the exam profile
     difficulty: Difficulty | None = None   # None = use the exam profile's mix
     subtype: str | None = None

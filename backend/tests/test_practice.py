@@ -25,3 +25,12 @@ def test_recent_questions_are_avoided_when_possible():
 def test_no_duplicate_numbers_within_a_session():
     qs = build_questions(ExamType.SSC_CGL, 20, Difficulty.MEDIUM, subtype="percent_of_number")
     assert len(_prints(qs)) == 20
+
+def test_weights_choose_the_subtype_and_difficulty():
+    qs = build_questions(ExamType.SSC_CGL, 6, weights={("percent_of_number", Difficulty.EASY): 1.0})
+    assert {(q.subtype, q.difficulty) for q in qs} == {("percent_of_number", Difficulty.EASY)}
+
+
+def test_weights_without_a_difficulty_use_the_given_one():
+    qs = build_questions(ExamType.SSC_CGL, 6, Difficulty.HARD, weights={("ratio_chain", None): 1.0})
+    assert {(q.subtype, q.difficulty) for q in qs} == {("ratio_chain", Difficulty.HARD)}

@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { createSession, getProfiles } from "../api";
-import type { Difficulty, Exam, Profile, Session, Topic } from "../types";
+import type { Difficulty, Exam, Mode, Profile, Session, Topic } from "../types";
 
 interface Props {
   onStart: (session: Session) => void;
@@ -24,9 +24,28 @@ const TOPICS: { value: Topic | null; label: string }[] = [
   { value: "interest", label: "Simple & compound interest" },
 ];
 
+const MODES: { value: Mode; label: string; hint: string }[] = [
+  {
+    value: "standard",
+    label: "Standard",
+    hint: "Questions chosen from the exam profile.",
+  },
+  {
+    value: "weak",
+    label: "My weak topics",
+    hint: "More questions from the types you get wrong most.",
+  },
+  {
+    value: "retry",
+    label: "Retry my mistakes",
+    hint: "New numbers for the types you recently got wrong. A short set: about 3 questions per open mistake.",
+  },
+];
+
 export default function Setup({ onStart }: Props) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [exam, setExam] = useState<Exam>("ssc_cgl");
+  const [mode, setMode] = useState<Mode>("standard");
   const [topic, setTopic] = useState<Topic | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [count, setCount] = useState(10);
@@ -44,7 +63,15 @@ export default function Setup({ onStart }: Props) {
     setError(null);
 
     try {
-      onStart(await createSession({ exam, topic, difficulty, count }));
+      onStart(
+        await createSession({
+          exam,
+          mode,
+          topic: mode === "retry" ? null : topic,
+          difficulty: mode === "retry" ? null : difficulty,
+          count,
+        }),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
@@ -91,39 +118,65 @@ export default function Setup({ onStart }: Props) {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-          Topic
+          Mode
         </h2>
 
         <div className="flex flex-wrap gap-2">
-          {TOPICS.map((t) => (
+          {MODES.map((m) => (
             <button
-              key={t.label}
-              onClick={() => setTopic(t.value)}
-              className={chip(topic === t.value)}
+              key={m.value}
+              onClick={() => setMode(m.value)}
+              className={chip(mode === m.value)}
             >
-              {t.label}
+              {m.label}
             </button>
           ))}
         </div>
+
+        <p className="text-xs text-slate-500">
+          {MODES.find((m) => m.value === mode)?.hint}
+        </p>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-          Difficulty
-        </h2>
+      {mode !== "retry" && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Topic
+          </h2>
 
-        <div className="flex flex-wrap gap-2">
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d.label}
-              onClick={() => setDifficulty(d.value)}
-              className={chip(difficulty === d.value)}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </section>
+          <div className="flex flex-wrap gap-2">
+            {TOPICS.map((t) => (
+              <button
+                key={t.label}
+                onClick={() => setTopic(t.value)}
+                className={chip(topic === t.value)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {mode !== "retry" && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Difficulty
+          </h2>
+
+          <div className="flex flex-wrap gap-2">
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d.label}
+                onClick={() => setDifficulty(d.value)}
+                className={chip(difficulty === d.value)}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
