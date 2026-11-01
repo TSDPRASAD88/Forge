@@ -92,7 +92,7 @@ def _proportion(rng: random.Random, d: Difficulty) -> Draft:
     answer = Fraction(r * c)
     item = rng.choice(ITEMS)
     return Draft(
-        params={"a": a, "b": b, "c": c},
+        params={"a": a, "b": b, "c": c, "item": item},
         text=f"If {a} {item} cost Rs {b}, what is the cost of {c} {item}?",
         unit="Rs",
         answer=answer,

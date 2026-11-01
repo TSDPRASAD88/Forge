@@ -118,3 +118,17 @@ def test_wrong_answer_gets_explanation(client):
             wrong_seen += 1
             assert r["explanation"]
     assert wrong_seen >= 1
+
+
+def test_answer_history_records_the_mistake_tag(client):
+    s = start(client, count=8)
+    for q in s["questions"]:
+        client.post(f"/api/sessions/{s['id']}/answers", json={"question_id": q["id"], "selected_index": 0})
+    items = client.get("/api/history").json()
+    assert len(items) == 8
+    for item in items:
+        if item["correct"]:
+            assert item["trap_tag"] is None
+        else:
+            assert item["trap_tag"].startswith(item["subtype"] + ":")
+    assert any(not i["correct"] for i in items)

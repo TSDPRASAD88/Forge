@@ -3,12 +3,15 @@ import { useState } from "react";
 import Practice from "./components/Practice";
 import Setup from "./components/Setup";
 import Dashboard from "./components/Dashboard";
+import { useBackendOnline } from "./useBackendOnline";
 import type { AnswerResult, Session } from "./types";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [results, setResults] = useState<AnswerResult[] | null>(null);
   const [showStats, setShowStats] = useState(false);
+
+  const online = useBackendOnline();
 
   let view;
 
@@ -68,6 +71,12 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-slate-100">
+      {!online && (
+        <div className="fixed inset-x-0 top-0 bg-red-500/90 px-4 py-2 text-center text-sm font-medium text-white">
+          Cannot reach the backend. Start it: cd backend, source .venv/bin/activate, uvicorn app.main:app --reload
+        </div>
+      )}
+
       {view}
     </div>
   );

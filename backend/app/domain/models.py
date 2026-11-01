@@ -56,6 +56,7 @@ class Question(BaseModel):
     steps: list[SolutionStep] = Field(default_factory=list)
     seed: int | None = None
     distractor_notes: dict[str, str] = Field(default_factory=dict)  # option text -> why it's wrong
+    distractor_tags: dict[str, str] = Field(default_factory=dict)  # option text -> mistake tag
 
     @model_validator(mode="after")
     def _check_options(self) -> "Question":

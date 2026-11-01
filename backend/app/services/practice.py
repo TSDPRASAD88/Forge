@@ -13,6 +13,11 @@ class QuestionBuildError(RuntimeError):
     pass
 
 
+def fingerprint(subtype: str, params: dict) -> tuple:
+    """Identity of a question's numbers, independent of how it is worded."""
+    return (subtype, tuple(sorted(params.items())))
+
+
 def pick_difficulty(exam: ExamType, rng: random.Random) -> Difficulty:
     mix = get_profile(exam).difficulty_mix
     return rng.choices(list(mix), weights=list(mix.values()))[0]
@@ -24,9 +29,15 @@ def build_questions(
     difficulty: Difficulty | None = None,
     subtype: str | None = None,
     topic: Topic | None = None,
+    avoid: set[tuple] | None = None,
 ) -> list[Question]:
-    """Generate `count` questions. Every one is validated; invalid or duplicate ones are discarded."""
+    """Generate `count` validated questions.
+
+    Preference order for each slot: a question whose numbers are new, then one seen in a recent
+    session (`avoid`), then a repeat from this session. The fallbacks keep tiny question pools working.
+    """
     rng = random.SystemRandom()
+    avoid = avoid or set()
     profile_topics = get_profile(exam).topics
     if subtype is not None:
         owner = all_subtypes().get(subtype)
@@ -35,9 +46,12 @@ def build_questions(
         topic = owner                      # a subtype belongs to exactly one topic
 
     questions: list[Question] = []
-    seen_texts: set[str] = set()
+    seen: set[tuple] = set()
 
     for _ in range(count):
+        fresh: Question | None = None
+        recent: Question | None = None
+        repeat: Question | None = None
         for _attempt in range(MAX_ATTEMPTS_PER_QUESTION):
             q = generate_question(
                 exam,
@@ -45,11 +59,19 @@ def build_questions(
                 topic=topic or rng.choice(profile_topics),
                 subtype=subtype,
             )
-            if q.text in seen_texts or not validate_question(q).ok:
+            if not validate_question(q).ok:
                 continue
-            seen_texts.add(q.text)
-            questions.append(q)
-            break
-        else:
-            raise QuestionBuildError("could not build a valid, unique question")
+            fp = fingerprint(q.subtype, q.params)
+            if fp in seen:
+                repeat = repeat or q
+            elif fp in avoid:
+                recent = recent or q
+            else:
+                fresh = q
+                break
+        chosen = fresh or recent or repeat
+        if chosen is None:
+            raise QuestionBuildError("could not build a valid question")
+        seen.add(fingerprint(chosen.subtype, chosen.params))
+        questions.append(chosen)
     return questions
