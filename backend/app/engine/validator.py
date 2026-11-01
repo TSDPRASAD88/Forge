@@ -99,6 +99,12 @@ def validate_question(q: Question) -> ValidationResult:
     elif any(not n.strip() for n in q.distractor_notes.values()):
         errors.append("a distractor note is empty")
 
+    # 7) every wrong option must carry a mistake tag; the correct one must not
+    if set(q.distractor_tags) != wrong:
+        errors.append("distractor_tags do not match the wrong options")
+    elif any(not t.strip() for t in q.distractor_tags.values()):
+        errors.append("a distractor tag is empty")
+
     return ValidationResult(errors)
 
 

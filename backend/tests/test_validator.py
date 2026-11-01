@@ -46,3 +46,8 @@ def test_bad_final_step_is_caught(q):
 def test_missing_note_is_caught(q):
     bad = q.model_copy(update={"distractor_notes": {}})
     assert not validate_question(bad).ok
+
+
+def test_missing_tag_is_caught(q):
+    bad = q.model_copy(update={"distractor_tags": {}})
+    assert not validate_question(bad).ok

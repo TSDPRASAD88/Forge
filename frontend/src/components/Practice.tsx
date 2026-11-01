@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { explainQuestion, submitAnswer } from "../api";
 import type { AnswerResult, Session } from "../types";
 
@@ -86,6 +86,42 @@ export default function Practice({ session, onFinish }: Props) {
     startedAt.current = Date.now();
   }
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        e.repeat ||
+        e.key.length === 0
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      if (!result) {
+        const i = key.length === 1 ? "abcd".indexOf(key) : -1;
+        const n = key.length === 1 ? "1234".indexOf(key) : -1;
+
+        if (i >= 0 || n >= 0) {
+          e.preventDefault();
+          answer(i >= 0 ? i : n);
+        } else if (key === "s") {
+          e.preventDefault();
+          answer(null);
+        }
+      } else if (key === "enter") {
+        e.preventDefault();
+        next();
+      }
+    }
+
+    window.addEventListener("keydown", onKey);
+
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   function optionClass(i: number) {
     const base =
       "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition";
@@ -148,6 +184,12 @@ export default function Practice({ session, onFinish }: Props) {
           </button>
         ))}
       </div>
+
+      {!result && (
+        <p className="text-xs text-slate-500">
+          Keys: A to D to answer · S to skip · Enter for next question
+        </p>
+      )}
 
       {error && (
         <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300">

@@ -18,7 +18,8 @@ from app.schemas import (
     SessionPublic,
 )
 from app.services.practice import QuestionBuildError, build_questions
-
+from app.services.practice import QuestionBuildError, build_questions, fingerprint
+RECENT_SESSIONS = 10
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
@@ -48,6 +49,19 @@ async def create_session(
                 detail=f"Subtype {body.subtype} belongs to {owner}, not {body.topic}",
             )
 
+    recent_docs = (
+        await db.sessions.find({})
+        .sort("created_at", -1)
+        .limit(RECENT_SESSIONS)
+        .to_list(length=RECENT_SESSIONS)
+    )
+
+    avoid = {
+        fingerprint(raw.get("subtype", ""), raw.get("params") or {})
+        for doc in recent_docs
+        for raw in doc.get("questions", [])
+    }
+
     try:
         questions = build_questions(
             body.exam,
@@ -55,6 +69,7 @@ async def create_session(
             body.difficulty,
             body.subtype,
             body.topic,
+            avoid,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -136,6 +151,12 @@ async def submit_answer(
     else:
         marks = round(-profile.marks_negative, 4)
 
+    trap_tag = (
+        None
+        if body.selected_index is None
+        else q.distractor_tags.get(q.options[body.selected_index])
+    )
+
     try:
         # Composite _id makes one answer per question per session atomic.
         await db.answers.insert_one(
@@ -153,6 +174,7 @@ async def submit_answer(
                 "correct": correct,
                 "skipped": skipped,
                 "marks": marks,
+                "trap_tag": trap_tag,
                 "time_taken_seconds": body.time_taken_seconds,
                 "answered_at": datetime.now(timezone.utc),
             }

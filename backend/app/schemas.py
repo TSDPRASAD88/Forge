@@ -66,6 +66,7 @@ class HistoryItem(BaseModel):
     correct_index: int
     correct: bool
     skipped: bool
+    trap_tag: str | None = None
     marks: float
     time_taken_seconds: float | None
     answered_at: datetime

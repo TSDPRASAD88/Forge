@@ -7,6 +7,7 @@ from typing import Callable
 from app.domain.enums import Difficulty, ExamType, Topic
 from app.domain.models import ExactValue, Question, SolutionStep
 from app.domain.profiles import get_profile
+from app.engine.wording import pick_wording
 
 MAX_TRIES = 200
 DIRECTIONS = ["increase", "decrease"]
@@ -102,6 +103,9 @@ def _what_percent(rng: random.Random, d: Difficulty) -> Draft:
             (Fraction(100 * y, x), "You flipped the fraction. Divide the part by the whole, not the whole by the part."),
             (100 - answer, "You found the remaining percentage (100 minus the answer) instead of the percentage asked."),
             (Fraction(100 * x, x + y), "You divided by the sum of both numbers. The whole is the number after 'of'."),
+            (answer * 10, "The decimal point slipped: this is 10 times too big. Multiply the fraction by 100, not 1000."),
+            (answer / 10, "The decimal point slipped: this is 10 times too small. Multiply the fraction by 100, not 10."),
+            (answer - 100, "You found how much LARGER the first number is than the second, as a percent. The question asks what percent the first number IS of the second."),
         ],
     )
 
@@ -137,6 +141,9 @@ def _percent_change(rng: random.Random, d: Difficulty) -> Draft:
             (Fraction(diff * 100, new), "You divided by the NEW value. Percentage change is always measured against the ORIGINAL value."),
             (Fraction(diff * 100, old + new), "You divided by the sum of old and new. Divide by the original value only."),
             (Fraction(diff), "You gave the raw change in value and forgot to convert it into a percentage."),
+            (Fraction(new * 100, old), "You gave the new value as a percent of the old value. The percentage change is how far that is from 100%."),
+            (answer * 10, "The decimal point slipped: this is 10 times too big. Multiply the fraction by 100, not 1000."),
+            (answer / 10, "The decimal point slipped: this is 10 times too small. Multiply the fraction by 100, not 10."),
         ],
     )
 
@@ -265,44 +272,47 @@ def _build_options(
     answer: Fraction,
     traps: list[tuple[Fraction, str]],
     allow_negative: bool,
-) -> tuple[list[str], int, dict[str, str]]:
+) -> tuple[list[str], int, dict[str, str], dict[str, str]]:
     seen = {_show(answer)}
-    distractors: list[tuple[Fraction, str]] = []
+    distractors: list[tuple[Fraction, str, str]] = []   # (value, note, kind)
 
-    def consider(c: Fraction, note: str) -> None:
-        if len(distractors) >= 3 or not _is_clean(c):
+    def consider(c: Fraction, note: str, kind: str) -> None:
+        if len(distractors) >= 3:
             return
+        if kind == "filler" and not _is_clean(c):
+            return                               # only real mistakes may display rounded (e.g. 33.33)
         if c < 0 and not allow_negative:
             return
         s = _show(c)
         if s in seen:
             return
         seen.add(s)
-        distractors.append((c, note))
+        distractors.append((c, note, kind))
 
-    shuffled = list(traps)
-    rng.shuffle(shuffled)
-    for value, note in shuffled:                 # 1) realistic mistakes first
-        consider(value, note)
-    for q in (10, -10, 20, -20, 5, -5):          # 2) nearby values
+    indexed = list(enumerate(traps))              # a trap's position in its list becomes its tag
+    rng.shuffle(indexed)
+    for i, (value, note) in indexed:              # 1) realistic mistakes first
+        consider(value, note, f"t{i}")
+    for q in (10, -10, 20, -20, 5, -5):           # 2) nearby values
         consider(
             answer * Fraction(100 + q, 100),
             f"This differs from the correct answer by about {abs(q)}%. It does not match a standard "
             f"mistake for this question, so recheck your arithmetic step by step.",
+            "filler",
         )
-    for k in range(1, 100):                      # 3) guaranteed fallback
+    for k in range(1, 100):                       # 3) guaranteed fallback
         note = (
             f"This is {k} away from the correct answer. It does not match a standard "
             f"mistake for this question, so recheck your arithmetic step by step."
         )
-        consider(answer + k, note)
-        consider(answer - k, note)
+        consider(answer + k, note, "filler")
+        consider(answer - k, note, "filler")
 
-    choices = [answer, *(c for c, _ in distractors)]
+    choices = [answer, *(c for c, _, _ in distractors)]
     rng.shuffle(choices)
-    notes = {_show(c): note for c, note in distractors}
-    return [_show(c) for c in choices], choices.index(answer), notes
-
+    notes = {_show(c): note for c, note, _ in distractors}
+    kinds = {_show(c): kind for c, _, kind in distractors}
+    return [_show(c) for c in choices], choices.index(answer), notes, kinds
 
 # ---------- public API ----------
 
@@ -363,13 +373,14 @@ def generate_question(
     else:
         raise GenerationError(f"could not generate a clean {name} question")
 
-    options, idx, notes = _build_options(rng, draft.answer, draft.traps, draft.allow_negative)
+    options, idx, notes, kinds = _build_options(rng, draft.answer, draft.traps, draft.allow_negative)
+    text = pick_wording(rng, name, draft.text, draft.params)
     return Question(
         exam=exam,
         topic=topic,
         subtype=name,
         difficulty=difficulty,
-        text=draft.text,
+        text=text,
         unit=draft.unit,
         options=options,
         correct_index=idx,
@@ -378,4 +389,5 @@ def generate_question(
         steps=draft.steps,
         seed=seed,
         distractor_notes=notes,
+        distractor_tags={opt: f"{name}:{kind}" for opt, kind in kinds.items()},
     )
